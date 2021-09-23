@@ -7,11 +7,12 @@ import (
 )
 
 const (
-	queryInsertUser     = "insert into users(first_name, last_name, email, date_created) values (?, ?, ?, ?);"
-	queryGetUserById    = "select id, first_name, last_name, email, date_created from users where id=?;"
-	queryGetUserByEmail = "select id, first_name, last_name, email, date_created from users where email=?;"
-	queryUpdateUser     = "update users set first_name=?, last_name=?, email=? where id=?;"
-	queryDeleteUser     = "delete from users where id=?"
+	queryInsertUser       = "insert into users(first_name, last_name, email, date_created, status, password) values (?, ?, ?, ?, ?, ?);"
+	queryGetUserById      = "select id, first_name, last_name, email, date_created, status from users where id=?;"
+	queryGetUserByEmail   = "select id, first_name, last_name, email, date_created, status from users where email=?;"
+	queryUpdateUser       = "update users set first_name=?, last_name=?, email=? where id=?;"
+	queryDeleteUser       = "delete from users where id=?;"
+	queryFindUserByStatus = "select id, first_name, last_name, email, date_created, status from users where status=?;"
 )
 
 var (
@@ -26,7 +27,7 @@ func (user *User) Get() *errors.RestErr {
 	defer stmt.Close()
 
 	result := stmt.QueryRow(user.Id)
-	if err := result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated); err != nil {
+	if err := result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated, &user.Status); err != nil {
 		return errors.NewNotFoundError(fmt.Sprintf("user %d not found.", user.Id))
 	}
 
@@ -40,7 +41,7 @@ func (user *User) Save() *errors.RestErr {
 	}
 	defer stmt.Close()
 
-	insertResult, err := stmt.Exec(user.FirstName, user.LastName, user.Email, user.DateCreated)
+	insertResult, err := stmt.Exec(user.FirstName, user.LastName, user.Email, user.DateCreated, user.Status, user.Password)
 	if err != nil {
 		return errors.NewInternalServerError(fmt.Sprintf("error when trying to save user: %s", err.Error()))
 	}
@@ -62,7 +63,7 @@ func (user *User) FindByEmail() *errors.RestErr {
 	defer stmt.Close()
 
 	result := stmt.QueryRow(user.Email)
-	err = result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated)
+	err = result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated, &user.Status)
 	if err != nil {
 		return errors.NewNotFoundError(fmt.Sprintf("user with email %s not found", user.Email))
 	}
@@ -96,4 +97,31 @@ func (user *User) Delete() *errors.RestErr {
 		return errors.NewInternalServerError(err.Error())
 	}
 	return nil
+}
+
+func (user *User) FindByStatus(status string) ([]User, *errors.RestErr) {
+	stmt, err := users_db.Client.Prepare(queryFindUserByStatus)
+	if err != nil {
+		return nil, errors.NewInternalServerError(err.Error())
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(status)
+	if err != nil {
+		return nil, errors.NewInternalServerError(err.Error())
+	}
+	defer rows.Close()
+
+	results := make([]User, 0)
+	for rows.Next() {
+		var user User
+		if err := rows.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated, &user.Status); err != nil {
+			return nil, errors.NewInternalServerError(err.Error())
+		}
+		results = append(results, user)
+	}
+	if len(results) == 0 {
+		return nil, errors.NewNotFoundError(fmt.Sprintf("no users matching status %s", status))
+	}
+	return results, nil
 }

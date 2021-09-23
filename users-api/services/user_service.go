@@ -28,6 +28,7 @@ func CreateUser(user users.User) (*users.User, *errors.RestErr) {
 		return nil, errors.NewBadRequestError(fmt.Sprintf("email %s already exists", user.Email))
 	}
 
+	user.Status = users.USER_ACTIVE
 	user.DateCreated = date_utils.GetTodayDateInString()
 	if err := user.Save(); err != nil {
 		return nil, err
@@ -41,8 +42,10 @@ func UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestErr) 
 		return nil, errors.NewBadRequestError("invalid user id")
 	}
 
-	if err := user.Validate(); err != nil {
-		return nil, err
+	if !isPartial {
+		if err := user.Validate(); err != nil {
+			return nil, err
+		}
 	}
 
 	current, err := GetUser(user.Id)
@@ -54,6 +57,7 @@ func UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestErr) 
 		current.FirstName = user.FirstName
 		current.LastName = user.LastName
 		current.Email = user.Email
+		current.Password = user.Password
 	} else {
 		if user.FirstName != "" {
 			current.FirstName = user.FirstName
@@ -63,6 +67,9 @@ func UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestErr) 
 		}
 		if user.Email != "" {
 			current.Email = user.Email
+		}
+		if user.Password != "" {
+			current.Password = user.Password
 		}
 	}
 
@@ -85,4 +92,9 @@ func DeleteUser(userId int64) *errors.RestErr {
 	}
 
 	return nil
+}
+
+func Search(status string) ([]users.User, *errors.RestErr) {
+	dao := &users.User{}
+	return dao.FindByStatus(status)
 }
