@@ -3,6 +3,7 @@ package users
 import (
 	"fmt"
 	"github.com/sijanstha/datasources/mysql/users_db"
+	"github.com/sijanstha/logger"
 	"github.com/sijanstha/utils/errors"
 )
 
@@ -22,7 +23,8 @@ var (
 func (user *User) Get() *errors.RestErr {
 	stmt, err := users_db.Client.Prepare(queryGetUserById)
 	if err != nil {
-		return errors.NewInternalServerError(err.Error())
+		logger.Error("error when trying to prepare get user statement", err)
+		return errors.NewInternalServerError(errors.NewError("database error").Error())
 	}
 	defer stmt.Close()
 

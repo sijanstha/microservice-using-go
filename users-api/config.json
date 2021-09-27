@@ -1,0 +1,8 @@
+{
+  "environmentVariables": [
+    "db_user_name",
+    "db_user_password",
+    "db_host",
+    "schema"
+  ]
+}

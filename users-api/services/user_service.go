@@ -3,11 +3,27 @@ package services
 import (
 	"fmt"
 	"github.com/sijanstha/domain/users"
+	"github.com/sijanstha/utils/crypto"
 	"github.com/sijanstha/utils/date_utils"
 	"github.com/sijanstha/utils/errors"
 )
 
-func GetUser(userId int64) (*users.User, *errors.RestErr) {
+var (
+	UserService userServiceInterface = &userService{}
+)
+
+type userService struct {
+}
+
+type userServiceInterface interface {
+	GetUser(int64) (*users.User, *errors.RestErr)
+	CreateUser(users.User) (*users.User, *errors.RestErr)
+	UpdateUser(bool, users.User) (*users.User, *errors.RestErr)
+	DeleteUser(int64) *errors.RestErr
+	SearchUser(string) (users.Users, *errors.RestErr)
+}
+
+func (s *userService) GetUser(userId int64) (*users.User, *errors.RestErr) {
 	if userId <= 0 {
 		return nil, errors.NewBadRequestError("invalid user id")
 	}
@@ -18,7 +34,7 @@ func GetUser(userId int64) (*users.User, *errors.RestErr) {
 	return &result, nil
 }
 
-func CreateUser(user users.User) (*users.User, *errors.RestErr) {
+func (s *userService) CreateUser(user users.User) (*users.User, *errors.RestErr) {
 	if err := user.Validate(); err != nil {
 		return nil, err
 	}
@@ -28,7 +44,8 @@ func CreateUser(user users.User) (*users.User, *errors.RestErr) {
 		return nil, errors.NewBadRequestError(fmt.Sprintf("email %s already exists", user.Email))
 	}
 
-	user.Status = users.USER_ACTIVE
+	user.Password = crypto.GetMd5(user.Password)
+	user.Status = users.StatusActive
 	user.DateCreated = date_utils.GetTodayDateInString()
 	if err := user.Save(); err != nil {
 		return nil, err
@@ -37,7 +54,7 @@ func CreateUser(user users.User) (*users.User, *errors.RestErr) {
 	return &user, nil
 }
 
-func UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestErr) {
+func (s *userService) UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestErr) {
 	if &user.Id == nil || user.Id <= 0 {
 		return nil, errors.NewBadRequestError("invalid user id")
 	}
@@ -48,7 +65,7 @@ func UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestErr) 
 		}
 	}
 
-	current, err := GetUser(user.Id)
+	current, err := s.GetUser(user.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +96,9 @@ func UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestErr) 
 	return current, nil
 }
 
-func DeleteUser(userId int64) *errors.RestErr {
+func (s *userService) DeleteUser(userId int64) *errors.RestErr {
 
-	current, err := GetUser(userId)
+	current, err := s.GetUser(userId)
 	if err != nil {
 		return err
 	}
@@ -94,7 +111,7 @@ func DeleteUser(userId int64) *errors.RestErr {
 	return nil
 }
 
-func Search(status string) ([]users.User, *errors.RestErr) {
+func (s *userService) SearchUser(status string) (users.Users, *errors.RestErr) {
 	dao := &users.User{}
 	return dao.FindByStatus(status)
 }

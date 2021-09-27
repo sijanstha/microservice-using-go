@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	USER_ACTIVE = "active"
+	StatusActive = "active"
 )
 
 type User struct {
@@ -18,6 +18,8 @@ type User struct {
 	Status      string `json:"status"`
 	Password    string `json:"password"`
 }
+
+type Users []User
 
 func (user *User) Validate() *errors.RestErr {
 	user.Email = strings.TrimSpace(strings.ToLower(user.Email))
