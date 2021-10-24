@@ -2,34 +2,30 @@ package users
 
 import (
 	"fmt"
+
+	"github.com/sijanstha/common-utils/src/logger"
+	"github.com/sijanstha/common-utils/src/utils/errors"
 	"github.com/sijanstha/datasources/mysql/users_db"
-	"github.com/sijanstha/logger"
-	"github.com/sijanstha/utils/errors"
 )
 
 const (
-	queryInsertUser             = "insert into users(first_name, last_name, email, date_created, status, password) values (?, ?, ?, ?, ?, ?);"
-	queryGetUserById            = "select id, first_name, last_name, email, date_created, status from users where id=?;"
-	queryGetUserByEmail         = "select id, first_name, last_name, email, date_created, status from users where email=?;"
-	queryUpdateUser             = "update users set first_name=?, last_name=?, email=? where id=?;"
-	queryDeleteUser             = "delete from users where id=?;"
-	queryFindByStatus           = "select id, first_name, last_name, email, date_created, status from users where status=?;"
-	queryFindByEmailAndPassword = "select id, first_name, last_name, email, date_created, status from users where email=? and password=? and status=?;"
+	queryInsertUser = "insert into users(first_name, last_name, email, date_created, status, password) values (?, ?, ?, ?, ?, ?);"
+	queryUpdateUser = "update users set first_name=?, last_name=?, email=? where id=?;"
+	queryDeleteUser = "delete from users where id=?;"
 )
 
-var (
-	usersDB = make(map[int64]*User)
-)
+func (user *User) Find(filter UserFilter) *errors.RestErr {
 
-func (user *User) Get() *errors.RestErr {
-	stmt, err := users_db.Client.Prepare(queryGetUserById)
+	query, args := prepareSelectQuery(filter)
+
+	stmt, err := users_db.Client.Prepare(query)
 	if err != nil {
 		logger.Error("error when trying to prepare get user statement", err)
 		return errors.NewInternalServerError(errors.NewError("database error").Error())
 	}
 	defer stmt.Close()
 
-	result := stmt.QueryRow(user.Id)
+	result := stmt.QueryRow(args...)
 	if err := result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated, &user.Status); err != nil {
 		return errors.NewNotFoundError(fmt.Sprintf("user %d not found.", user.Id))
 	}
@@ -58,23 +54,8 @@ func (user *User) Save() *errors.RestErr {
 	return nil
 }
 
-func (user *User) FindByEmail() *errors.RestErr {
-	stmt, err := users_db.Client.Prepare(queryGetUserByEmail)
-	if err != nil {
-		return errors.NewInternalServerError(err.Error())
-	}
-	defer stmt.Close()
-
-	result := stmt.QueryRow(user.Email)
-	err = result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated, &user.Status)
-	if err != nil {
-		return errors.NewNotFoundError(fmt.Sprintf("user with email %s not found", user.Email))
-	}
-
-	return nil
-}
-
 func (user *User) Update() *errors.RestErr {
+
 	stmt, err := users_db.Client.Prepare(queryUpdateUser)
 	if err != nil {
 		return errors.NewInternalServerError(err.Error())
@@ -102,14 +83,16 @@ func (user *User) Delete() *errors.RestErr {
 	return nil
 }
 
-func (user *User) FindByStatus(status string) ([]User, *errors.RestErr) {
-	stmt, err := users_db.Client.Prepare(queryFindByStatus)
+func (user *User) FindAll(filter UserFilter) ([]User, *errors.RestErr) {
+
+	query, args := prepareSelectQuery(filter)
+	stmt, err := users_db.Client.Prepare(query)
 	if err != nil {
 		return nil, errors.NewInternalServerError(err.Error())
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(status)
+	rows, err := stmt.Query(args...)
 	if err != nil {
 		return nil, errors.NewInternalServerError(err.Error())
 	}
@@ -123,24 +106,34 @@ func (user *User) FindByStatus(status string) ([]User, *errors.RestErr) {
 		}
 		results = append(results, user)
 	}
-	if len(results) == 0 {
-		return nil, errors.NewNotFoundError(fmt.Sprintf("no users matching status %s", status))
-	}
+
 	return results, nil
 }
 
-func (user *User) FindByEmailAndPassword() *errors.RestErr {
-	stmt, err := users_db.Client.Prepare(queryFindByEmailAndPassword)
-	if err != nil {
-		logger.Error("error when trying to prepare get user by email and password", err)
-		return errors.NewInternalServerError(errors.NewError("database error").Error())
-	}
-	defer stmt.Close()
+func prepareSelectQuery(filter UserFilter) (string, []interface{}) {
+	args := make([]interface{}, 0)
 
-	result := stmt.QueryRow(user.Email, user.Password, StatusActive)
-	if err := result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated, &user.Status); err != nil {
-		return errors.NewNotFoundError("invalid user credentials")
+	query := "select id, first_name, last_name, email, date_created, status from users where 1=1 "
+	if filter.Id != 0 {
+		query += "and id = ? "
+		args = append(args, filter.Id)
 	}
 
-	return nil
+	if filter.Email != "" {
+		query += "and email = ? "
+		args = append(args, filter.Email)
+	}
+
+	if filter.Password != "" {
+		query += "and password = ? "
+		args = append(args, filter.Password)
+	}
+
+	if filter.Status != "" {
+		query += "and status = ? "
+		args = append(args, filter.Status)
+	}
+
+	logger.Info(query)
+	return query, args
 }

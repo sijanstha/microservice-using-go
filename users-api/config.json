@@ -3,6 +3,8 @@
     "db_user_name",
     "db_user_password",
     "db_host",
-    "schema"
+    "schema",
+    "oauth_ms_url",
+    "is_debug"
   ]
 }

@@ -2,10 +2,11 @@ package access_token
 
 import (
 	"fmt"
-	"github.com/sijanstha/oauth-api/src/utils/crypto_utils"
-	"github.com/sijanstha/oauth-api/src/utils/errors"
 	"strings"
 	"time"
+
+	"github.com/sijanstha/common-utils/src/utils/crypto"
+	"github.com/sijanstha/common-utils/src/utils/errors"
 )
 
 const (
@@ -63,5 +64,5 @@ func (at *AccessToken) Validate() *errors.RestErr {
 }
 
 func (at *AccessToken) Generate() {
-	at.AccessToken = crypto_utils.GetMd5(fmt.Sprintf("at-%d-%d-ran", at.UserId, at.Expires))
+	at.AccessToken = crypto.GetMd5(fmt.Sprintf("at-%d-%d-ran", at.UserId, at.Expires))
 }

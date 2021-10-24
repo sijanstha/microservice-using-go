@@ -1,9 +1,9 @@
 package access_token
 
 import (
+	"github.com/sijanstha/common-utils/src/utils/errors"
 	"github.com/sijanstha/oauth-api/src/domain/access_token"
 	"github.com/sijanstha/oauth-api/src/repository/rest"
-	"github.com/sijanstha/oauth-api/src/utils/errors"
 	"strings"
 )
 

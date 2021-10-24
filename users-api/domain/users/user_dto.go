@@ -1,8 +1,9 @@
 package users
 
 import (
-	"github.com/sijanstha/utils/errors"
 	"strings"
+
+	"github.com/sijanstha/common-utils/src/utils/errors"
 )
 
 const (

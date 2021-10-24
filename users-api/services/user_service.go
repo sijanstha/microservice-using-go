@@ -2,10 +2,11 @@ package services
 
 import (
 	"fmt"
+
+	"github.com/sijanstha/common-utils/src/utils/crypto"
+	"github.com/sijanstha/common-utils/src/utils/date_utils"
+	"github.com/sijanstha/common-utils/src/utils/errors"
 	"github.com/sijanstha/domain/users"
-	"github.com/sijanstha/utils/crypto"
-	"github.com/sijanstha/utils/date_utils"
-	"github.com/sijanstha/utils/errors"
 )
 
 var (
@@ -20,7 +21,7 @@ type userServiceInterface interface {
 	CreateUser(users.User) (*users.User, *errors.RestErr)
 	UpdateUser(bool, users.User) (*users.User, *errors.RestErr)
 	DeleteUser(int64) *errors.RestErr
-	SearchUser(string) (users.Users, *errors.RestErr)
+	SearchUser(UserListSearchRequest) (users.Users, *errors.RestErr)
 	FindUserForAuthentication(*users.UserLoginRequest) (*users.User, *errors.RestErr)
 }
 
@@ -28,8 +29,9 @@ func (s *userService) GetUser(userId int64) (*users.User, *errors.RestErr) {
 	if userId <= 0 {
 		return nil, errors.NewBadRequestError("invalid user id")
 	}
-	result := users.User{Id: userId}
-	if err := result.Get(); err != nil {
+	result := users.User{}
+
+	if err := result.Find(users.UserFilter{Id: userId}); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -40,7 +42,7 @@ func (s *userService) CreateUser(user users.User) (*users.User, *errors.RestErr)
 		return nil, err
 	}
 
-	err := user.FindByEmail()
+	err := user.Find(users.UserFilter{Email: user.Email})
 	if err == nil {
 		return nil, errors.NewBadRequestError(fmt.Sprintf("email %s already exists", user.Email))
 	}
@@ -112,20 +114,28 @@ func (s *userService) DeleteUser(userId int64) *errors.RestErr {
 	return nil
 }
 
-func (s *userService) SearchUser(status string) (users.Users, *errors.RestErr) {
+func (s *userService) SearchUser(request UserListSearchRequest) (users.Users, *errors.RestErr) {
+	filter := users.UserFilter{
+		Id:     request.Id,
+		Email:  request.Email,
+		Status: request.Status,
+	}
+
 	dao := &users.User{}
-	return dao.FindByStatus(status)
+	return dao.FindAll(filter)
+
 }
 
 func (s *userService) FindUserForAuthentication(request *users.UserLoginRequest) (*users.User, *errors.RestErr) {
 	if err := request.Validate(); err != nil {
 		return nil, err
 	}
-	dao := &users.User{
+	filter := users.UserFilter{
 		Email:    request.Email,
 		Password: crypto.GetMd5(request.Password),
 	}
-	if err := dao.FindByEmailAndPassword(); err != nil {
+	dao := &users.User{}
+	if err := dao.Find(filter); err != nil {
 		return nil, err
 	}
 

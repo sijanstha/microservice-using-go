@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/sijanstha/app"
-	"github.com/sijanstha/logger"
-	"github.com/sijanstha/utils/errors"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/sijanstha/app"
+	"github.com/sijanstha/common-utils/src/logger"
+	"github.com/sijanstha/common-utils/src/utils/errors"
 )
 
 func init() {

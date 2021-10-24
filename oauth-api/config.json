@@ -1,0 +1,6 @@
+{
+  "environmentVariables": [
+    "user_ms_url",
+    "is_debug"
+  ]
+}

@@ -2,7 +2,8 @@ package app
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/sijanstha/logger"
+	"github.com/sijanstha/common-utils/src/logger"
+	"github.com/sijanstha/middleware/security"
 )
 
 var (
@@ -11,6 +12,7 @@ var (
 
 func StartApplication() {
 	logger.Info("Proceeding to map URI")
+	router.Use(security.SecurityInterceptor())
 	mapUrls()
 	logger.Info("URI mapping done")
 	logger.Info("About to start application")

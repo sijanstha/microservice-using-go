@@ -3,13 +3,15 @@ package rest
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/sijanstha/oauth-api/src/client/rest"
+	"os"
+
+	"github.com/sijanstha/common-utils/src/client/rest"
+	"github.com/sijanstha/common-utils/src/utils/errors"
 	"github.com/sijanstha/oauth-api/src/domain/users"
-	"github.com/sijanstha/oauth-api/src/utils/errors"
 )
 
 var (
-	userMSBaseURL = "http://localhost:8080"
+	userMSBaseURL = os.Getenv("user_ms_url")
 )
 
 type RestUserRepository interface {

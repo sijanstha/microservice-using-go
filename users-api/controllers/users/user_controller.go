@@ -1,12 +1,14 @@
 package users
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/sijanstha/domain/users"
-	"github.com/sijanstha/services"
-	"github.com/sijanstha/utils/errors"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/sijanstha/common-utils/src/oauth"
+	"github.com/sijanstha/common-utils/src/utils/errors"
+	"github.com/sijanstha/domain/users"
+	"github.com/sijanstha/services"
 )
 
 func CreateUser(c *gin.Context) {
@@ -23,10 +25,11 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, result.Marshall(c.GetHeader("X-PUBLIC") == "true"))
+	c.JSON(http.StatusCreated, result.Marshall(oauth.IsPublic(c.Request)))
 }
 
 func GetUser(c *gin.Context) {
+
 	userId, userErr := strconv.ParseInt(c.Param("user_id"), 10, 64)
 	if userErr != nil {
 		err := errors.NewBadRequestError("invalid user id")
@@ -39,7 +42,7 @@ func GetUser(c *gin.Context) {
 		c.JSON(getErr.Code, getErr)
 		return
 	}
-	c.JSON(http.StatusOK, user.Marshall(c.GetHeader("X-PUBLIC") == "true"))
+	c.JSON(http.StatusOK, user.Marshall(oauth.IsPublic(c.Request)))
 }
 
 func DeleteUser(c *gin.Context) {
@@ -74,17 +77,23 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, result.Marshall(c.GetHeader("X-PUBLIC") == "true"))
+	c.JSON(http.StatusOK, result.Marshall(oauth.IsPublic(c.Request)))
 }
 
 func Search(c *gin.Context) {
-	status := c.Query("status")
-	users, err := services.UserService.SearchUser(status)
+	var request services.UserListSearchRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		restErr := errors.NewBadRequestError("invalid json body")
+		c.JSON(restErr.Code, restErr)
+		return
+	}
+
+	users, err := services.UserService.SearchUser(request)
 	if err != nil {
 		c.JSON(err.Code, err)
 		return
 	}
-	c.JSON(http.StatusOK, users.Marshall(c.GetHeader("X-PUBLIC") == "true"))
+	c.JSON(http.StatusOK, users.Marshall(oauth.IsPublic(c.Request)))
 }
 
 func Login(c *gin.Context) {
@@ -99,5 +108,5 @@ func Login(c *gin.Context) {
 		c.JSON(err.Code, err)
 		return
 	}
-	c.JSON(http.StatusOK, user.Marshall(c.GetHeader("X-PUBLIC") == "true"))
+	c.JSON(http.StatusOK, user.Marshall(oauth.IsPublic(c.Request)))
 }
